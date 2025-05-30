@@ -1,5 +1,5 @@
-import { lowerCase, trim } from "lodash";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken"
 
 const userSchema = new mongoose.Schema({
     name : {
@@ -53,5 +53,29 @@ const userSchema = new mongoose.Schema({
 
 },{timestamps:true});
 
+
+// Here we are creating the verification code OTP
+userSchema.methods.generateVerifiactionCode = function(){
+    function generateRandomFiveDigitNumber(){
+        const firstDigit = Math.floor(Math.random()*9)+1;
+        const remainingDigit = Math.floor(Math.random()*10000).toString().padStart(4,0);
+        return parseInt(firstDigit+remainingDigit);
+    }
+
+    const verificationCode = generateRandomFiveDigitNumber();
+    this.verificationCode = verificationCode;
+    this.verificationCodeExpire = Date.now()+15*60*1000;
+
+    return verificationCode;
+}
+
+// Here we are generating the token
+userSchema.methods.generateToken = function(){
+    return jwt.sign(
+        {id : this._id,},
+        process.env.JWT_SECRET_KEY,
+        {expiresIn : process.env.JWT_EXPIRE}
+    )
+}
 
 export const User = mongoose.model("User",userSchema);
