@@ -134,3 +134,54 @@ export const verifyOTP = catchAsyncError(async(req,res,next)=>{
     }
 })
 
+
+export const login = catchAsyncError(async(req,res,next)=>{
+    // take user login credential like mail and password
+    // check the user enter the mail and password or not
+    // check the mail is available in our database or not
+    // check the password match or not
+    // create the token and make user login
+
+    const {email, password} = req.body;
+    if(!email || !password){
+        throw new ErrorHandler("Please enter all the field",400);
+    }
+
+    // check user exist or not
+    const isValidUser = await User.findOne({email,accountVerified:true}).select("+password");
+    if(!isValidUser){
+        throw new ErrorHandler("Invalid userid or password ",400);
+    }
+
+    // Match the password
+    const isPasswordCorrect = await bcrypt.compare(password,isValidUser.password);
+    if(!isPasswordCorrect){
+        throw new ErrorHandler("Invalid userid or password ",400);
+    }
+
+    // send the token
+    sendToken(isValidUser,200,"User login successfully",res);
+
+})
+
+
+export const logout = catchAsyncError(async(req,res,next)=>{
+    // delete the cookie
+    res.status(200).cookie("token","",{
+        expires : new Date(Date.now()),
+        httpOnly : true
+    }).json({
+        success : true,
+        message : "logout successfully"
+    })
+})
+
+
+export const getUser = catchAsyncError(async(req,res,next)=>{
+    const user = req.user;
+
+    res.status(200).json({
+        success : true,
+        user
+    })
+})
