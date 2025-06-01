@@ -29,3 +29,24 @@ export function generateVerifiactionOtpEmailTemplate(otpCode){
 
   </div>`
 }
+
+export function generateForgetPasswordEmailTemplate(resetPasswordUrl){
+  return `
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9f9f9; padding: 20px;">
+    <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <h2 style="color: #333333;">Reset Your Password</h2>
+      <p>Hello,</p>
+      <p>We received a request to reset your password. Click the button below to choose a new password:</p>
+      <p style="text-align: center;">
+        <a href="${resetPasswordUrl}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
+          Reset Password
+        </a>
+      </p>
+      <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+      <p><a href="${resetPasswordUrl}">${resetPasswordUrl}</a></p>
+      <p>If you didn't request a password reset, please ignore this email.</p>
+      <p>Thanks,<br>Your Team</p>
+    </div>
+  </div>
+`
+}

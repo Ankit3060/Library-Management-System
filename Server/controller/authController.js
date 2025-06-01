@@ -5,6 +5,8 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { sendVerifiacationcode } from "../utils/sendVerificationCode.js";
 import { sendToken } from "../utils/sendToken.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { generateForgetPasswordEmailTemplate } from "../utils/emailTemplate.js";
 
 export const register = catchAsyncError(async(req,res,next)=>{
 
@@ -183,5 +185,130 @@ export const getUser = catchAsyncError(async(req,res,next)=>{
     res.status(200).json({
         success : true,
         user
+    })
+})
+
+
+export const forgetPassword = catchAsyncError(async(req,res,next)=>{
+    if(!req.body.email){
+        throw new ErrorHandler("Email is required ",400)
+    }
+
+    const user = await User.findOne({
+        email : req.body.email,
+        accountVerified : true
+    })
+
+    if(!user){
+        throw new ErrorHandler("Invalid email",400);
+    }
+
+    const resetToken = user.getResetPasswordToken();
+
+    await user.save({validateBeforeSave : false});
+
+    const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
+
+    const message = generateForgetPasswordEmailTemplate(resetPasswordUrl);
+
+    try {
+        await sendEmail({
+            email : user.email,
+            subject : "Bookworm Library Management System Recovery Password",
+            message,
+        })
+        res.status(200).json({
+            success : true,
+            message : `Email sent to the ${user.email} successfully`
+        })
+    } catch (error) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        await user.save({validateBeforeSave : false});
+
+        throw new ErrorHandler(error.message,500);
+    }
+})
+
+
+export const resetPassword = catchAsyncError(async(req,res,next)=>{
+    // get the token 
+    // console.log("working till here")
+    const {token} = req.params;
+    const resetPasswordToken = crypto
+                               .createHash("sha256")
+                               .update(token)
+                               .digest("hex");
+    
+    const user = await User.findOne({
+        resetPasswordToken,
+        resetPasswordExpire : {$gt : Date.now()}
+    })
+    if(!user){
+        throw new ErrorHandler("Reset passsword token is invalid or expired",400);
+    }
+
+    if(req.body.password != req.body.confirmPassword){
+        throw new ErrorHandler("Password and confirmed password do not match",400);
+    }
+
+    if( req.body.password.length<8 || 
+        req.body.password.length>16 || 
+        req.body.confirmPassword.length<8 || 
+        req.body.confirmPassword.length>16){
+            throw new ErrorHandler("Password must be between 8 and 16 character",400);
+    }
+
+    //now hash the password
+    const hashPassword = await bcrypt.hash(req.body.password,10);
+
+    //update the password and token also
+    user.password = hashPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    // now save the user
+    await user.save();
+
+    // send the token to the user
+    sendToken(user,200,"Password reset successful",res);
+
+})
+
+
+export const updatePassword = catchAsyncError(async(req,res,next)=>{
+    const user = await User.findById(req.user._id).select("+password");
+    // console.log("working til here");
+    
+    const {currentPassword, newPassword, confirmNewPassword} = req.body;
+
+    if(!currentPassword || !newPassword || !confirmNewPassword){
+        throw new ErrorHandler("Please enter all field",400);
+    }
+
+    const checkCurrentPassword = await bcrypt.compare(currentPassword,user.password);
+    if(!checkCurrentPassword){
+        throw new ErrorHandler("currrent password is incorrect",400);
+    }
+    
+    if( newPassword.length<8 || 
+        newPassword.length>16 || 
+        confirmNewPassword.length<8 || 
+        confirmNewPassword.length>16){
+            throw new ErrorHandler("Password must be between 8 and 16 character",400);
+    }
+
+    if(newPassword != confirmNewPassword){
+        throw new ErrorHandler("new password and confirm password donot match",400);
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword,10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({
+        success : true,
+        message : "password update successful"
     })
 })
