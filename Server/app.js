@@ -4,8 +4,9 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { connectDB } from "./database/db.js";
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
-import authRouter from "./routes/authRouter.js"
-import bookRouter from "./routes/bookRouter.js"
+import authRouter from "./routes/authRouter.js";
+import bookRouter from "./routes/bookRouter.js";
+import borrowRouter from "./routes/borrowRouter.js";
 
 
 export const app = express();
@@ -29,7 +30,7 @@ app.use(express.urlencoded({extended:true}));
 // Routers
 app.use("/api/v1/auth",authRouter);
 app.use("/api/v1/book",bookRouter)
-
+app.use("/api/v1/borrow",borrowRouter);
 
 // Connecting the DB
 connectDB();
