@@ -55,7 +55,7 @@ export const recordBorrowedBooks = catchAsyncError(async(req,res,next)=>{
         price : book.price,
      });
 
-     res.status(200).jason({
+     res.status(200).json({
         success : true,
         message : "Borrowed book recorded successfully",
      })
